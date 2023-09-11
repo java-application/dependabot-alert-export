@@ -14,7 +14,11 @@ const octokit = github.getOctokit(GITHUB_TOKEN);
 // inputs defined in action metadata file
 const org_Name = core.getInput('org_name');
 const repo_Name = core.getInput('repo_name');
-const csv_path = core.getInput('csv_path') + new Date().toISOString();
+// const csv_path = core.getInput('csv_path') + new Date().toISOString();
+const currentDate = new Date();
+const formattedDate = currentDate.toISOString().replace(/:/g, '-').replace(/\./g, '_');
+const csv_path = `${core.getInput('csv_path')}_${formattedDate}`;
+
 
 // Graphql query for vulnerability data
 const query =
@@ -35,7 +39,7 @@ const query =
             dismissReason
             dismissComment
             fixedAt
-            fixReason
+            // fixReason
             dependencyScope
             repository{
               name
@@ -134,10 +138,10 @@ const query =
     label: 'Fixed At',
     value: 'fixedAt'
   },
-  {
-    label: 'Fix Reason',
-    value: 'fixReason'
-  },
+  // {
+  //   label: 'Fix Reason',
+  //   value: 'fixReason'
+  // },
   {
     label: 'Manifest File Path',
     value: 'vulnerableManifestPath'
@@ -173,6 +177,11 @@ async function run(org_Name, repo_Name, csv_path) {
       // invoke the graphql query execution
       await getAlerts(org_Name, repo_Name, pagination).then(alertResult => {
         let vulnerabilityNodes = alertResult.repository.vulnerabilityAlerts.nodes;
+
+        // Check for undefined fields to prevent errors
+        if (!alertResult || !alertResult.repository || !alertResult.repository.vulnerabilityAlerts) {
+          throw new Error("Unexpected response: 'alertResult', 'alertResult.repository', or 'alertResult.repository.vulnerabilityAlerts' is undefined");
+        }
         
         if(addTitleRow){
           alertCount = alertResult.repository.vulnerabilityAlerts.totalCount;
